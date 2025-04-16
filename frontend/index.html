@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Contact Manager</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --bg: #111111;
+      --text: #000000;
+      --card: #f0f0f0;
+      --input: #222222;
+      --button: #ab47bc;
+      --button-text: #000000;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      --transition: all 0.3s ease-in-out;
+      --header-bg: #ab47bc;
+      --header-text: #ffffff;
+    }
+
+    body.dark {
+      --bg: #111111;
+      --text: #e0e0e0;
+      --card: #1a1a1a;
+      --input: #222222;
+      --button: #ab47bc;
+      --button-text: #ffffff;
+      background-image: linear-gradient(145deg, #111 0%, #1a1a1a 100%);
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', 'Noto Sans', sans-serif;
+      padding: 20px;
+      text-align: center;
+      transition: var(--transition);
+      background-image: linear-gradient(145deg, #f3f3f3 0%, #ffffff 100%);
+      background-attachment: fixed;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 8px 16px;
+      background-color: var(--header-bg);
+      color: var(--header-text);
+      box-shadow: var(--shadow);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: var(--header-text);
+    }
+
+    input, button {
+      background-color: var(--card);
+      color: inherit;
+      border: none;
+      padding: 12px;
+      margin: 10px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+    }
+
+    header input#search {
+      flex-grow: 1;
+      max-width: 300px;
+    }
+
+    input:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--button);
+    }
+
+    button {
+      background-color: var(--button);
+      color: var(--button-text);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+    }
+
+    li {
+      background-color: var(--card);
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      text-align: left;
+      transition: var(--transition);
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+      font-size: 0.95rem;
+    }
+
+    li:hover {
+      transform: translateY(-2px);
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background-color: var(--card);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+    }
+    .modal.show {
+      display: flex;
+    }
+
+    .profile-pic {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      color: white;
+      background-color: var(--button);
+      border-radius: 50%;
+      text-align: center;
+      line-height: 30px;
+      font-weight: bold;
+      margin-right: 10px;
+      font-size: 0.9rem;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      margin-bottom: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--button);
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 32px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 2px;
+      left: 2px;
+      right: 2px;
+      bottom: 2px;
+      background-color: var(--card);
+      border-radius: 30px;
+      transition: background-color 0.4s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .slider i {
+      color: var(--button);
+      font-size: 1rem;
+      transition: transform 0.4s ease;
+    }
+    .switch input:checked + .slider i {
+      transform: rotate(180deg);
+      content: '\f185'; /* sun */
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Contact Manager</h1>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <input type="text" id="search" placeholder="Search contacts..." />
+      <label class="switch">
+        <input type="checkbox" id="themeSwitch">
+        <span class="slider"><i class="fas fa-moon"></i></span>
+      </label>
+    </div>
+  </header>
+  <form id="contactForm">
+    <input type="text" id="name" placeholder="Name" required />
+    <input type="email" id="email" placeholder="Email" required />
+    <input type="text" id="phone" placeholder="Phone" required />
+    <button type="submit">Add Contact</button>
+  </form>
+
+  <ul id="contactList"></ul>
+  <div class="modal" id="infoModal">
+    <div class="modal-content">
+      <p id="modalText">This is a modal dialog.</p>
+      <button onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
+
+  <script>
+    function getRandomColor() {
+      const hue = Math.floor(Math.random() * 360);
+      return `hsl(${hue}, 70%, 60%)`;
+    }
+
+    const form = document.getElementById("contactForm");
+    const list = document.getElementById("contactList");
+    const search = document.getElementById("search");
+    
+    let contacts = [];
+    let editingId = null;
+
+    async function loadContacts() {
+      const res = await fetch("http://localhost:3000/contacts");
+      contacts = await res.json();
+      renderContacts();
+    }
+    
+    function renderContacts() {
+      const searchTerm = search?.value?.toLowerCase() || "";
+      list.innerHTML = "";
+      const filtered = contacts.filter(c =>
+        c.name.toLowerCase().includes(searchTerm) ||
+        c.email.toLowerCase().includes(searchTerm) ||
+        c.phone.includes(searchTerm)
+      );
+
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
+      if (searchTerm && filtered.length === 0) {
+        list.innerHTML = "<li>No contacts found.</li>";
+        return;
+      }
+
+      if (filtered.length === 0) {
+        list.innerHTML = "<li>No contacts found.</li>";
+        return;
+      }
+
+      filtered.forEach(contact => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="profile-pic" style="background-color: ${getRandomColor()}">${contact.name.charAt(0).toUpperCase()}</div>
+            <div>
+              <strong style="color: var(--text);"><i class="fas fa-user"></i> ${contact.name}</strong><br/>
+              <i class="fas fa-envelope"></i> ${contact.email}<br/>
+              <i class="fas fa-phone"></i> ${contact.phone}<br/>
+              <button onclick="editContact('${contact._id}')"><i class="fas fa-pen"></i> Edit</button>
+              <button onclick="deleteContact('${contact._id}')"><i class="fas fa-trash"></i> Delete</button>
+            </div>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+    }
+    
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const name = form.name.value.trim();
+      const email = form.email.value.trim();
+      const phone = form.phone.value.trim();
+
+      if (!name || !validateEmail(email) || !validatePhone(phone)) {
+        alert("Please enter a valid name, email (e.g. abc@example.com), and a 10-digit phone number.");
+        return;
+      }
+
+      const contact = { name, email, phone };
+
+      if (editingId) {
+        await fetch(`http://localhost:3000/contacts/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(contact),
+        });
+        editingId = null;
+      } else {
+        await fetch("http://localhost:3000/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(contact),
+        });
+      }
+
+      form.reset();
+      loadContacts();
+    });
+    
+    async function deleteContact(id) {
+      await fetch(`http://localhost:3000/contacts/${id}`, {
+        method: "DELETE",
+      });
+      loadContacts();
+    }
+    
+    function editContact(id) {
+      const contact = contacts.find(c => c._id === id);
+      if (contact) {
+        form.name.value = contact.name;
+        form.email.value = contact.email;
+        form.phone.value = contact.phone;
+        editingId = id;
+      }
+    }
+    
+    function validateEmail(email) {
+      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return regex.test(email);
+    }
+    
+    function validatePhone(phone) {
+      const regex = /^[0-9]{10}$/;
+      return regex.test(phone);
+    }
+    
+    search?.addEventListener("input", renderContacts);
+    
+    const themeSwitch = document.getElementById("themeSwitch");
+
+    function applyTheme(theme) {
+      const sliderIcon = document.querySelector(".slider i");
+      if (theme === "dark") {
+        document.body.classList.add("dark");
+        themeSwitch.checked = true;
+        sliderIcon.classList.remove("fa-sun");
+        sliderIcon.classList.add("fa-moon");
+      } else {
+        document.body.classList.remove("dark");
+        themeSwitch.checked = false;
+        sliderIcon.classList.remove("fa-moon");
+        sliderIcon.classList.add("fa-sun");
+      }
+    }
+
+    themeSwitch.addEventListener("change", () => {
+      const newTheme = themeSwitch.checked ? "dark" : "light";
+      applyTheme(newTheme);
+      localStorage.setItem("theme", newTheme);
+    });
+
+    applyTheme(localStorage.getItem("theme") || "light");
+    
+    loadContacts();
+
+    function openModal(message) {
+      document.getElementById("modalText").innerText = message;
+      document.getElementById("infoModal").classList.add("show");
+    }
+
+    function closeModal() {
+      document.getElementById("infoModal").classList.remove("show");
+    }
+  </script>
+</body>
+</html>

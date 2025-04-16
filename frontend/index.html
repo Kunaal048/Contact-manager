@@ -29,10 +29,11 @@
     }
 
     body {
+      margin: 0; /* Remove body margin */
+      padding-top: 60px; /* Add top padding to prevent content from being hidden under the header */
       background-color: var(--bg);
       color: var(--text);
       font-family: 'Segoe UI', 'Noto Sans', sans-serif;
-      padding: 20px;
       text-align: center;
       transition: var(--transition);
       background-image: linear-gradient(145deg, #f3f3f3 0%, #ffffff 100%);
@@ -41,13 +42,19 @@
 
     header {
       display: flex;
-      justify-content: space-between;
+      justify-content: space-around;
       align-items: center;
       flex-wrap: wrap;
-      padding: 8px 16px;
+      padding: 2px 2px;
       background-color: var(--header-bg);
       color: var(--header-text);
       box-shadow: var(--shadow);
+      margin: 0; /* Remove any margin */
+      width: 100%; /* Ensure the header spans the full width */
+      position: fixed; /* Fixed position to attach to the top edge */
+      top: 0; /* Align at the top */
+      left: 0; /* Align to the left */
+      right: 0; /* Align to the right */
     }
 
     header h1 {
@@ -67,9 +74,14 @@
       transition: var(--transition);
     }
 
+    input {
+      transition: border 0.3s ease;
+    }
+
     header input#search {
       flex-grow: 1;
       max-width: 300px;
+      margin-right: 8px;
     }
 
     input:focus {
@@ -171,6 +183,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      margin-left: 8px;
     }
     .slider i {
       color: var(--button);
@@ -181,27 +194,38 @@
       transform: rotate(180deg);
       content: '\f185'; /* sun */
     }
+
+    .contact-header {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Contact Manager</h1>
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <input type="text" id="search" placeholder="Search contacts..." />
+    <h1><i class="fas fa-address-book"></i> Contact Manager</h1>
+    <div style="display: flex; align-items: center; gap: 30px;">
+      <div style="position: relative;">
+        <i class="fas fa-search" style="position: absolute; left: 22px; top: 50%; transform: translateY(-50%); color: #888;"></i>
+        <input type="text" id="search" placeholder="Search contacts..." style="padding-left: 40px;" />
+      </div>
       <label class="switch">
         <input type="checkbox" id="themeSwitch">
         <span class="slider"><i class="fas fa-moon"></i></span>
       </label>
     </div>
   </header>
-  <form id="contactForm">
+  <button id="toggleFormButton" style="margin: 20px auto; display: block;">+ Add Contact</button>
+  <form id="contactForm" style="display: none;">
     <input type="text" id="name" placeholder="Name" required />
     <input type="email" id="email" placeholder="Email" required />
     <input type="text" id="phone" placeholder="Phone" required />
     <button type="submit">Add Contact</button>
   </form>
+  <ul id="contactList" style="margin-top: 20px;"></ul>
 
-  <ul id="contactList"></ul>
   <div class="modal" id="infoModal">
     <div class="modal-content">
       <p id="modalText">This is a modal dialog.</p>
@@ -209,8 +233,16 @@
     </div>
   </div>
 
+  <div id="snackbar" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background-color: var(--card); color: var(--text); padding: 12px 20px; border-radius: 8px;
+    box-shadow: var(--shadow); display: none; z-index: 999;">
+    Contact deleted. <button onclick="undoDelete()" style="margin-left: 10px;">Undo</button>
+  </div>
 
   <script>
+    let deletedContacts = [];
+    let lastDeleted = null;
+
     function getRandomColor() {
       const hue = Math.floor(Math.random() * 360);
       return `hsl(${hue}, 70%, 60%)`;
@@ -252,21 +284,31 @@
       filtered.forEach(contact => {
         const li = document.createElement("li");
         li.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                    <div class="profile-pic" style="background-color: ${getRandomColor()}">${contact.name.charAt(0).toUpperCase()}</div>
-            <div>
-              <strong style="color: var(--text);"><i class="fas fa-user"></i> ${contact.name}</strong><br/>
-              <i class="fas fa-envelope"></i> ${contact.email}<br/>
-              <i class="fas fa-phone"></i> ${contact.phone}<br/>
-              <button onclick="editContact('${contact._id}')"><i class="fas fa-pen"></i> Edit</button>
-              <button onclick="deleteContact('${contact._id}')"><i class="fas fa-trash"></i> Delete</button>
-            </div>
+          <div class="contact-header" onclick="toggleDetails(this)">
+            <div class="profile-pic" style="background-color: ${getRandomColor()}">${contact.name.charAt(0).toUpperCase()}</div>
+            <strong style="color: var(--text);" ondblclick="editField(event, 'name', '${contact._id}')">
+              <i class="fas fa-user"></i> 
+              <span id="name-${contact._id}">${contact.name}</span>
+            </strong>
+          </div>
+          <div class="contact-details" style="display: none; margin-top: 10px;">
+            <i class="fas fa-envelope"></i> 
+            <span id="email-${contact._id}" ondblclick="editField(event, 'email', '${contact._id}')">${contact.email}</span><br/>
+            <i class="fas fa-phone"></i> 
+            <span id="phone-${contact._id}" ondblclick="editField(event, 'phone', '${contact._id}')">${contact.phone}</span><br/>
+            <button onclick="editContact('${contact._id}')"><i class="fas fa-pen"></i> Edit</button>
+            <button onclick="deleteContact('${contact._id}')"><i class="fas fa-trash"></i> Delete</button>
           </div>
         `;
         list.appendChild(li);
       });
     }
     
+    function toggleDetails(headerElement) {
+      const details = headerElement.nextElementSibling;
+      details.style.display = details.style.display === "none" ? "block" : "none";
+    }
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
@@ -276,6 +318,26 @@
 
       if (!name || !validateEmail(email) || !validatePhone(phone)) {
         alert("Please enter a valid name, email (e.g. abc@example.com), and a 10-digit phone number.");
+        return;
+      }
+
+      const existing = contacts.find(c => c.name === name || c.phone === phone);
+      const deletedMatch = deletedContacts.find(c => c.name === name || c.phone === phone);
+
+      if (existing) {
+        alert("A contact with this name or phone number already exists.");
+        return;
+      }
+
+      if (deletedMatch && confirm("This looks like a previously deleted contact. Do you want to restore it?")) {
+        await fetch("http://localhost:3000/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(deletedMatch),
+        });
+        deletedContacts = deletedContacts.filter(c => c._id !== deletedMatch._id);
+        form.reset();
+        loadContacts();
         return;
       }
 
@@ -301,10 +363,15 @@
     });
     
     async function deleteContact(id) {
+      const contact = contacts.find(c => c._id === id);
+      if (!contact) return;
+
+      lastDeleted = contact;
       await fetch(`http://localhost:3000/contacts/${id}`, {
         method: "DELETE",
       });
       loadContacts();
+      showSnackbar();
     }
     
     function editContact(id) {
@@ -326,6 +393,22 @@
       const regex = /^[0-9]{10}$/;
       return regex.test(phone);
     }
+    
+    function showValidationFeedback(input, isValid) {
+      input.style.border = isValid ? '2px solid green' : '2px solid red';
+    }
+
+    document.getElementById("name").addEventListener("input", (e) => {
+      showValidationFeedback(e.target, e.target.value.trim().length > 0);
+    });
+
+    document.getElementById("email").addEventListener("input", (e) => {
+      showValidationFeedback(e.target, validateEmail(e.target.value));
+    });
+
+    document.getElementById("phone").addEventListener("input", (e) => {
+      showValidationFeedback(e.target, validatePhone(e.target.value));
+    });
     
     search?.addEventListener("input", renderContacts);
     
@@ -364,6 +447,34 @@
     function closeModal() {
       document.getElementById("infoModal").classList.remove("show");
     }
+
+    function showSnackbar() {
+      const snackbar = document.getElementById("snackbar");
+      snackbar.style.display = "block";
+      setTimeout(() => {
+        snackbar.style.display = "none";
+        lastDeleted = null;
+      }, 5000);
+    }
+
+    async function undoDelete() {
+      if (!lastDeleted) return;
+      await fetch("http://localhost:3000/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lastDeleted),
+      });
+      lastDeleted = null;
+      document.getElementById("snackbar").style.display = "none";
+      loadContacts();
+    }
+
+    const toggleFormButton = document.getElementById("toggleFormButton");
+    toggleFormButton.addEventListener("click", () => {
+      const form = document.getElementById("contactForm");
+      form.style.display = form.style.display === "none" ? "block" : "none";
+      toggleFormButton.textContent = form.style.display === "none" ? "+ Add Contact" : "Close Form";
+    });
   </script>
 </body>
 </html>
